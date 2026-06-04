@@ -16,7 +16,7 @@ import java.util.List;
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("v1/admin")
 @Tag(
         name = "Admin API",
         description = "APIs for administrators to manage all user histories"

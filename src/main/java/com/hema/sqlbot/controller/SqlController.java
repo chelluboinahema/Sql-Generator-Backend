@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ import java.util.List;
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
-@RequestMapping("/api/sql")
+@RequestMapping("v1/api/sql")
 @Tag(
         name = "SQL Generator API",
         description = "AI-powered API to generate, explain, optimize SQL queries and manage user history"
@@ -42,7 +43,7 @@ public class SqlController {
             @ApiResponse(responseCode = "400", description = "Invalid request"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<?> generateSql(@RequestBody SqlRequest request) {
+    public ResponseEntity<?> generateSql( @Valid @RequestBody SqlRequest request) {
 
         if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -65,7 +66,7 @@ public class SqlController {
             @ApiResponse(responseCode = "200", description = "SQL explained successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request")
     })
-    public ResponseEntity<?> explainSql(@RequestBody SqlRequest request) {
+    public ResponseEntity<?> explainSql( @Valid @RequestBody SqlRequest request) {
 
         if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -88,7 +89,7 @@ public class SqlController {
             @ApiResponse(responseCode = "200", description = "SQL optimized successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request")
     })
-    public ResponseEntity<?> optimizeSql(@RequestBody SqlRequest request) {
+    public ResponseEntity<?> optimizeSql( @Valid @RequestBody SqlRequest request) {
 
         if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

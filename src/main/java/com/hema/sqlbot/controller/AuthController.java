@@ -6,6 +6,7 @@ import com.hema.sqlbot.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import jakarta.validation.Valid;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register user")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register( @Valid @RequestBody RegisterRequest request) {
         try {
             String token = authService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(token));
@@ -36,7 +37,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Login user")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login( @Valid @RequestBody LoginRequest request) {
         try {
             String token = authService.login(request);
             return ResponseEntity.ok(new AuthResponse(token));
