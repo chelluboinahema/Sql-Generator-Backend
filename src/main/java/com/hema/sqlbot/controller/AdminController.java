@@ -10,8 +10,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -20,6 +22,9 @@ import java.util.List;
 @Tag(
         name = "Admin API",
         description = "APIs for administrators to manage all user histories"
+)
+@PreAuthorize(
+        "hasRole('ADMIN')"
 )
 public class AdminController {
 
@@ -86,6 +91,19 @@ public class AdminController {
 
         return ResponseEntity.ok(
                 "History deleted successfully"
+        );
+    }
+
+    @GetMapping("/check-role")
+    public ResponseEntity<?> checkRole() {
+
+        Authentication auth =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        return ResponseEntity.ok(
+                auth.getAuthorities()
         );
     }
 }

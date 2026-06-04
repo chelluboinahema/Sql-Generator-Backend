@@ -15,14 +15,16 @@ public class AppUserDetailsService
 
         this.repository = repository;
     }
-
     @Override
     public UserDetails loadUserByUsername(
-            String email)
-            throws UsernameNotFoundException {
+            String email
+    ) {
 
-        var user =
-                repository.findByEmail(email)
+        com.hema.sqlbot.modal.User user =
+
+                repository
+                        .findByEmail(email)
+
                         .orElseThrow(
                                 () ->
                                         new UsernameNotFoundException(
@@ -30,12 +32,23 @@ public class AppUserDetailsService
                                         )
                         );
 
-        return User.builder()
-                .username(user.getEmail())
-                .password(user.getPassword())
-                .roles(
-                        user.getRole().name()
+        return org.springframework.security.core.userdetails.User
+
+                .builder()
+
+                .username(
+                        user.getEmail()
                 )
+
+                .password(
+                        user.getPassword()
+                )
+
+                .authorities(
+                        "ROLE_" +
+                                user.getRole().name()
+                )
+
                 .build();
     }
 }

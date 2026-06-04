@@ -1,18 +1,23 @@
 package com.hema.sqlbot.security;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
-import org.springframework.security.authentication.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.security.core.userdetails.UserDetails;
+
 import org.springframework.stereotype.Component;
+
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
 @Component
-public class JwtFilter
-        extends OncePerRequestFilter {
+public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
@@ -20,7 +25,8 @@ public class JwtFilter
 
     public JwtFilter(
             JwtService jwtService,
-            AppUserDetailsService userService) {
+            AppUserDetailsService userService
+    ) {
 
         this.jwtService = jwtService;
         this.userService = userService;
@@ -30,21 +36,17 @@ public class JwtFilter
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException,
-            IOException {
+            FilterChain filterChain
+    )
+            throws ServletException, IOException {
 
-        String auth =
-                request.getHeader(
-                        "Authorization"
-                );
+        String authHeader =
+                request.getHeader("Authorization");
 
         if (
-                auth == null
+                authHeader == null
                         ||
-                        !auth.startsWith(
-                                "Bearer "
-                        )
+                        !authHeader.startsWith("Bearer ")
         ) {
 
             filterChain.doFilter(
@@ -56,14 +58,10 @@ public class JwtFilter
         }
 
         String token =
-                auth.substring(
-                        7
-                );
+                authHeader.substring(7);
 
         if (
-                jwtService.isValid(
-                        token
-                )
+                jwtService.isValid(token)
         ) {
 
             String email =
@@ -71,16 +69,20 @@ public class JwtFilter
                             token
                     );
 
-            UserDetails details =
+            UserDetails userDetails =
                     userService.loadUserByUsername(
                             email
                     );
 
             UsernamePasswordAuthenticationToken authentication =
+
                     new UsernamePasswordAuthenticationToken(
-                            details,
+
+                            userDetails,
+
                             null,
-                            details.getAuthorities()
+
+                            userDetails.getAuthorities()
                     );
 
             SecurityContextHolder
