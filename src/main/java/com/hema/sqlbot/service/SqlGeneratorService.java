@@ -1,123 +1,210 @@
 package com.hema.sqlbot.service;
 
-import com.hema.sqlbot.modal.QueryHistory;
-import com.hema.sqlbot.modal.SqlRequest;
-import com.hema.sqlbot.modal.SqlResponse;
-import com.hema.sqlbot.repository.QueryHistoryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.hema.sqlbot.modal.*;
+import com.hema.sqlbot.repository.*;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-
 public class SqlGeneratorService {
 
-    @Autowired
     private final OpenAIService openAIService;
-    @Autowired
+
     private final QueryHistoryRepository repository;
 
-    public SqlGeneratorService(OpenAIService openAIService,
-                               QueryHistoryRepository repository) {
+    private final UserRepository userRepository;
+
+    public SqlGeneratorService(
+            OpenAIService openAIService,
+            QueryHistoryRepository repository,
+            UserRepository userRepository
+    ) {
+
         this.openAIService = openAIService;
+
         this.repository = repository;
+
+        this.userRepository = userRepository;
     }
 
-    // ---------------- GENERATE SQL ----------------
-    public SqlResponse generateSql(SqlRequest request) {
+    public SqlResponse generateSql(
+            SqlRequest request
+    ) {
 
-        if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
-            return null;
-        }
-        String userInput = request.getInput();
+        String prompt =
+                """
+                Convert this into SQL.
 
-        String prompt = """
-                Convert the following natural language request into SQL query.
-                Return only SQL query.
-
-                Request:
                 %s
-                """.formatted(userInput);
+                """
+                        .formatted(
+                                request.getInput()
+                        );
 
-        String sql = openAIService.generateResponse(prompt);
+        String sql =
+                openAIService.generateResponse(
+                        prompt
+                );
 
-        saveHistory(userInput, sql);
+        saveHistory(
+                request.getInput(),
+                sql
+        );
 
         return new SqlResponse(sql);
     }
 
-    // ---------------- EXPLAIN SQL ----------------
-    public SqlResponse explainSql(SqlRequest request) {
-        if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
-            return null;
-        }
-        String sqlQuery = request.getInput();
+    public SqlResponse explainSql(
+            SqlRequest request
+    ) {
 
-        String prompt = """
-                Explain this SQL query in simple human-readable language.
+        String explanation =
+                openAIService.generateResponse(
+                        "Explain SQL:\n"
+                                +
+                                request.getInput()
+                );
 
-                SQL:
-                %s
-                """.formatted(sqlQuery);
-
-        String explanation = openAIService.generateResponse(prompt);
-
-        saveHistory(sqlQuery, explanation);
+        saveHistory(
+                request.getInput(),
+                explanation
+        );
 
         return new SqlResponse(explanation);
     }
 
-    // ---------------- OPTIMIZE SQL ----------------
-    public SqlResponse optimizeSql(SqlRequest request) {
-        if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
-            return null;
-        }
-        String sqlQuery = request.getInput();
+    public SqlResponse optimizeSql(
+            SqlRequest request
+    ) {
 
-        String prompt = """
-                Optimize this SQL query.
-                Suggest better query and explain performance improvements.
+        String output =
+                openAIService.generateResponse(
+                        "Optimize SQL:\n"
+                                +
+                                request.getInput()
+                );
 
-                SQL:
-                %s
-                """.formatted(sqlQuery);
+        saveHistory(
+                request.getInput(),
+                output
+        );
 
-        String optimized = openAIService.generateResponse(prompt);
-
-        saveHistory(sqlQuery, optimized);
-
-        return new SqlResponse(optimized);
+        return new SqlResponse(output);
     }
 
-    // ---------------- SAVE HISTORY ----------------
-    private void saveHistory(String input, String output) {
+    private void saveHistory(
+            String input,
+            String output
+    ) {
 
-        QueryHistory history = new QueryHistory();
-        history.setInputText(input);
-        history.setGeneratedSql(output);
-        history.setCreatedAt(LocalDateTime.now());
+        User user =
+                getCurrentUser();
 
-        repository.save(history);
+        QueryHistory history =
+                new QueryHistory();
+
+        history.setInputText(
+                input
+        );
+
+        history.setGeneratedSql(
+                output
+        );
+
+        history.setCreatedAt(
+                LocalDateTime.now()
+        );
+
+        history.setUser(
+                user
+        );
+
+        repository.save(
+                history
+        );
     }
 
-    // ---------------- GET ALL HISTORY ----------------
+    public List<QueryHistory> getMyHistory() {
+
+        return repository.findByUser(
+                getCurrentUser()
+        );
+    }
+
+    public QueryHistory getHistory(
+            Long id
+    ) {
+
+        return repository
+                .findByIdAndUser(
+                        id,
+                        getCurrentUser()
+                )
+
+                .orElseThrow(
+                        () ->
+                                new RuntimeException(
+                                        "History not found"
+                                )
+                );
+    }
+
+    public void deleteHistory(
+            Long id
+    ) {
+
+        QueryHistory history =
+                repository
+                        .findByIdAndUser(
+                                id,
+                                getCurrentUser()
+                        )
+
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "History not found"
+                                        )
+                        );
+
+        repository.delete(
+                history
+        );
+    }
+
     public List<QueryHistory> getAllHistory() {
+
         return repository.findAll();
     }
 
-    // ---------------- GET HISTORY BY ID ----------------
-    public QueryHistory getHistoryById(Long id) {
+    private User getCurrentUser() {
+
+        String email =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getName();
+
+        return userRepository
+                .findByEmail(
+                        email
+                )
+
+                .orElseThrow();
+    }
+
+    public QueryHistory getAdminHistoryById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("History not found"));
     }
 
-    // ---------------- DELETE HISTORY ----------------
-    public void deleteHistory(Long id) {
+    public void deleteAdminHistory(Long id) {
         repository.deleteById(id);
     }
 }

@@ -7,6 +7,7 @@ import com.hema.sqlbot.service.SqlGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +15,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/sql")
-@Tag(name = "SQL Generator API", description = "AI-powered API to generate, explain, optimize SQL queries and manage history")
+@Tag(
+        name = "SQL Generator API",
+        description = "AI-powered API to generate, explain, optimize SQL queries and manage user history"
+)
 public class SqlController {
 
     private final SqlGeneratorService sqlGeneratorService;
@@ -26,22 +31,31 @@ public class SqlController {
     }
 
     // ---------------- GENERATE SQL ----------------
+
     @PostMapping("/generate")
     @Operation(
             summary = "Generate SQL query",
-            description = "Converts natural language input into SQL query using AI"
+            description = "Converts natural language into SQL using AI and stores history for logged-in user"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "SQL generated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public ResponseEntity<?> generateSql(@RequestBody SqlRequest request) {
+
+        if (request == null || request.getInput() == null || request.getInput().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Input cannot be empty");
+        }
+
         SqlResponse response = sqlGeneratorService.generateSql(request);
+
         return ResponseEntity.ok(response);
     }
 
     // ---------------- EXPLAIN SQL ----------------
+
     @PostMapping("/explain")
     @Operation(
             summary = "Explain SQL query",
@@ -59,14 +73,16 @@ public class SqlController {
         }
 
         SqlResponse response = sqlGeneratorService.explainSql(request);
+
         return ResponseEntity.ok(response);
     }
 
     // ---------------- OPTIMIZE SQL ----------------
+
     @PostMapping("/optimize")
     @Operation(
             summary = "Optimize SQL query",
-            description = "Optimizes SQL query and suggests improvements"
+            description = "Optimizes SQL query and suggests performance improvements"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "SQL optimized successfully"),
@@ -80,60 +96,59 @@ public class SqlController {
         }
 
         SqlResponse response = sqlGeneratorService.optimizeSql(request);
+
         return ResponseEntity.ok(response);
     }
 
-    // ---------------- GET ALL HISTORY ----------------
+    // ---------------- GET MY HISTORY ----------------
+
     @GetMapping("/history")
     @Operation(
-            summary = "Get all query history",
-            description = "Fetches all SQL generation history records"
+            summary = "Get current user's history",
+            description = "Returns only history belonging to logged-in user"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "History fetched successfully")
+            @ApiResponse(responseCode = "200", description = "History fetched successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<List<QueryHistory>> getAllHistory() {
-        List<QueryHistory> history = sqlGeneratorService.getAllHistory();
-        return ResponseEntity.ok(history);
+    public ResponseEntity<List<QueryHistory>> getHistory() {
+
+        return ResponseEntity.ok(sqlGeneratorService.getMyHistory());
     }
 
     // ---------------- GET HISTORY BY ID ----------------
+
     @GetMapping("/history/{id}")
     @Operation(
-            summary = "Get query history by ID",
-            description = "Fetches a specific query history record by ID"
+            summary = "Get history by ID",
+            description = "Returns selected history only if owned by logged-in user"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "History record found"),
-            @ApiResponse(responseCode = "404", description = "History record not found")
+            @ApiResponse(responseCode = "200", description = "History fetched"),
+            @ApiResponse(responseCode = "404", description = "History not found")
     })
     public ResponseEntity<?> getHistoryById(@PathVariable Long id) {
-        try {
-            QueryHistory history = sqlGeneratorService.getHistoryById(id);
-            return ResponseEntity.ok(history);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(e.getMessage());
-        }
+
+        QueryHistory history = sqlGeneratorService.getHistory(id);
+
+        return ResponseEntity.ok(history);
     }
 
     // ---------------- DELETE HISTORY ----------------
+
     @DeleteMapping("/history/{id}")
     @Operation(
-            summary = "Delete query history",
-            description = "Deletes a query history record by ID"
+            summary = "Delete history",
+            description = "Deletes only history belonging to current user"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "History deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "History record not found")
+            @ApiResponse(responseCode = "200", description = "Deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "History not found")
     })
-    public ResponseEntity<?> deleteHistory(@PathVariable Long id) {
-        try {
-            sqlGeneratorService.deleteHistory(id);
-            return ResponseEntity.ok("History deleted successfully");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("History not found");
-        }
+    public ResponseEntity<String> deleteHistory(@PathVariable Long id) {
+
+        sqlGeneratorService.deleteHistory(id);
+
+        return ResponseEntity.ok("History deleted successfully");
     }
 }
