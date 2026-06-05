@@ -24,7 +24,7 @@ public class CorsConfig {
         config.setAllowedOrigins(
                 List.of(
                         "http://localhost:3000/",
-                        "https://your-frontend-domain.vercel.app"
+                        "https://sql-bot-one.vercel.app/"
                 )
         );
 
