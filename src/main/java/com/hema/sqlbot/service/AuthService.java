@@ -27,7 +27,7 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
     }
 
-    public String register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
@@ -49,12 +49,12 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return jwtService.generateToken(
+        return new AuthResponse(jwtService.generateToken(
                 user.getEmail()
-        );
+        ), user.getRole());
     }
 
-    public String login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -62,9 +62,12 @@ public class AuthService {
                         request.getPassword()
                 )
         );
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return jwtService.generateToken(
-                request.getEmail()
+        return new AuthResponse(
+                jwtService.generateToken(user.getEmail()),
+                user.getRole()
         );
     }
 }

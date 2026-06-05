@@ -25,8 +25,8 @@ public class AuthController {
     @Operation(summary = "Register user")
     public ResponseEntity<?> register( @Valid @RequestBody RegisterRequest request) {
         try {
-            String token = authService.register(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(token));
+            AuthResponse authResponse = authService.register(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
         }
         catch (Exception ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -39,8 +39,8 @@ public class AuthController {
     @Operation(summary = "Login user")
     public ResponseEntity<?> login( @Valid @RequestBody LoginRequest request) {
         try {
-            String token = authService.login(request);
-            return ResponseEntity.ok(new AuthResponse(token));
+            AuthResponse authResponse = authService.login(request);
+            return ResponseEntity.ok(authResponse);
         }
         catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
